@@ -1,0 +1,38 @@
+# Environment and secrets
+.env
+*.env.local
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Logs
+*.log
+
+# Large ML datasets and generated vector stores
+Data/
+vectorstore/
+
+# Large trained model files
+*.h5
+*.keras
+*.keras.bak
+*.weights.h5
