@@ -20,7 +20,8 @@ from rag import (
     format_retrieved_sources_html,
     format_retrieved_sources_markdown,
     sanitize_sources_to_markdown,
-    render_chat_message_html
+    render_chat_message_html,
+    format_point_by_point_markdown
 )
 from classification import DISPLAY_NAMES, SHORT_NAMES, TELUGU_NAMES
 
@@ -907,8 +908,8 @@ elif nav_selection == "💬 Veterinary RAG":
                     st.session_state[rep_key] = (rep_obj, rep_docs)
             r_obj, r_docs = st.session_state[rep_key]
             
-            r_en = getattr(r_obj, 'en', str(r_obj))
-            r_te = getattr(r_obj, 'te', getattr(r_obj, 'en', str(r_obj)))
+            r_en = format_point_by_point_markdown(getattr(r_obj, 'en', str(r_obj)))
+            r_te = format_point_by_point_markdown(getattr(r_obj, 'te', getattr(r_obj, 'en', str(r_obj))))
             
             if bilingual_mode == "English":
                 st.markdown(r_en)
@@ -1011,17 +1012,17 @@ elif nav_selection == "💬 Veterinary RAG":
                 col_en, col_te = st.columns(2)
                 with col_en:
                     st.markdown("**🇬🇧 English**")
-                    st.markdown(en_part)
+                    st.markdown(format_point_by_point_markdown(en_part))
                 with col_te:
                     st.markdown("**🇮🇳 తెలుగు (Telugu)**")
-                    st.markdown(te_part)
+                    st.markdown(format_point_by_point_markdown(te_part))
             elif bilingual_mode == "తెలుగు":
                 st.markdown("**🇮🇳 తెలుగు (Telugu)**")
-                st.markdown(te_part or content)
+                st.markdown(format_point_by_point_markdown(te_part or content))
             else:
                 disp_text = en_part or content
                 st.markdown("**🇬🇧 English**")
-                st.markdown(disp_text)
+                st.markdown(format_point_by_point_markdown(disp_text))
 
             if sources_md:
                 st.markdown(sources_md)
@@ -1071,11 +1072,11 @@ elif nav_selection == "💬 Veterinary RAG":
             en_txt = ""
             te_txt = ""
             if hasattr(ans_t, "english_markdown") and hasattr(ans_t, "telugu_markdown"):
-                en_txt = ans_t.english_markdown
-                te_txt = ans_t.telugu_markdown
+                en_txt = format_point_by_point_markdown(ans_t.english_markdown)
+                te_txt = format_point_by_point_markdown(ans_t.telugu_markdown)
                 content_str = ans_t.combined
             else:
-                content_str = str(ans_t)
+                content_str = format_point_by_point_markdown(str(ans_t))
 
             st.session_state['rag_chat_history'].append({"role": "user", "content": chosen_q})
             st.session_state['rag_chat_history'].append({

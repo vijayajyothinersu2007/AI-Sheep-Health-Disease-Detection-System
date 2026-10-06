@@ -202,6 +202,11 @@ CORE GROUNDING RULES:
 4. PURE MARKDOWN ONLY (NO RAW HTML):
    - Output clean Markdown only. NEVER output raw HTML tags (no <div>, <ul>, <li>, <span>, <a>, <p>).
 
+5. POINT-BY-POINT STRUCTURE:
+   - Present advice strictly point-by-point.
+   - Every numbered point (1., 2., 3.) and bullet point (•) must appear on its own separate line with a blank line between points.
+   - Do NOT join multiple points into a single continuous sentence or paragraph.
+
 RESPONSE FORMAT:
 Return your response as a strictly valid JSON object with matching parallel sections:
 {{

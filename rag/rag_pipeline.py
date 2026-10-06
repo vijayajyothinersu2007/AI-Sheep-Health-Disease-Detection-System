@@ -19,7 +19,7 @@ from .prompts import (
     VETERINARY_SYSTEM_PROMPT
 )
 from .llm import LLMClient
-from .response_formatter import format_retrieved_sources_html
+from .response_formatter import format_retrieved_sources_html, format_point_by_point_markdown
 
 class ClinicalReport:
     """
@@ -27,8 +27,8 @@ class ClinicalReport:
     for side-by-side rendering in the UI.
     """
     def __init__(self, en_text: str, te_text: str, combined_text: str = ""):
-        self.en = en_text.strip()
-        self.te = te_text.strip()
+        self.en = format_point_by_point_markdown(en_text.strip())
+        self.te = format_point_by_point_markdown(te_text.strip())
         self.combined = combined_text or f"{self.en}\n\n---\n\n{self.te}"
 
     def __str__(self) -> str:
@@ -65,7 +65,7 @@ class ClinicalChatResponse:
     @property
     def english_markdown(self) -> str:
         if self._en_markdown:
-            return self._en_markdown
+            return format_point_by_point_markdown(self._en_markdown)
         if not self.english_sections:
             return ""
         blocks = []
@@ -74,17 +74,14 @@ class ClinicalChatResponse:
             clean_heading = re.sub(r"^(?:###\s*)?\d+[\.\)]\s*", "", heading).strip()
             clean_heading = re.sub(r"<[^>]+>", "", clean_heading).strip()
             content = str(sec.get("content") or "").strip()
-            clean_content = re.sub(r"<(div|span|p|section|article)[^>]*>", "", content, flags=re.IGNORECASE)
-            clean_content = re.sub(r"</(div|span|p|section|article)>", "", clean_content, flags=re.IGNORECASE)
-            clean_content = re.sub(r"<br\s*/?>", "\n", clean_content, flags=re.IGNORECASE)
-            clean_content = re.sub(r"<[^>]+>", "", clean_content).strip()
-            blocks.append(f"### {i}. {clean_heading}\n\n{clean_content}")
-        return "\n\n---\n\n".join(blocks)
+            formatted_content = format_point_by_point_markdown(content)
+            blocks.append(f"### {i}. {clean_heading}\n\n{formatted_content}")
+        return format_point_by_point_markdown("\n\n---\n\n".join(blocks))
 
     @property
     def telugu_markdown(self) -> str:
         if self._te_markdown:
-            return self._te_markdown
+            return format_point_by_point_markdown(self._te_markdown)
         if not self.telugu_sections:
             return ""
         blocks = []
@@ -93,12 +90,9 @@ class ClinicalChatResponse:
             clean_heading = re.sub(r"^(?:###\s*)?\d+[\.\)]\s*", "", heading).strip()
             clean_heading = re.sub(r"<[^>]+>", "", clean_heading).strip()
             content = str(sec.get("content") or "").strip()
-            clean_content = re.sub(r"<(div|span|p|section|article)[^>]*>", "", content, flags=re.IGNORECASE)
-            clean_content = re.sub(r"</(div|span|p|section|article)>", "", clean_content, flags=re.IGNORECASE)
-            clean_content = re.sub(r"<br\s*/?>", "\n", clean_content, flags=re.IGNORECASE)
-            clean_content = re.sub(r"<[^>]+>", "", clean_content).strip()
-            blocks.append(f"### {i}. {clean_heading}\n\n{clean_content}")
-        return "\n\n---\n\n".join(blocks)
+            formatted_content = format_point_by_point_markdown(content)
+            blocks.append(f"### {i}. {clean_heading}\n\n{formatted_content}")
+        return format_point_by_point_markdown("\n\n---\n\n".join(blocks))
 
     @property
     def combined(self) -> str:

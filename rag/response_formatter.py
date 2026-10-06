@@ -9,12 +9,111 @@ Ensures ZERO raw HTML source code is ever displayed to the user.
 """
 
 from typing import List, Dict, Any, Union, Optional
-
 import html
-
+import json
 import re
-
 from .documents import Document
+
+def format_point_by_point_markdown(text: str) -> str:
+    """
+    Formats a veterinary RAG answer ensuring strict point-by-point presentation in Streamlit:
+    1. Every numbered point starts on a new line with a blank line between numbered points.
+    2. Every bullet point appears on its own separate line with a blank line between points.
+    3. Inline numbered points and inline bullets joined on a single line are cleanly split.
+    4. Escaped newlines (\\n) are converted to actual newlines.
+    5. Raw JSON structures and accidental HTML tags are sanitized and never exposed.
+    6. Headings and horizontal rules are preserved as separate blocks.
+    7. English and Telugu answers maintain the identical point-by-point structure.
+    8. Preserves the exact medical content and original order without modification.
+    """
+    if not text:
+        return ""
+
+    s = str(text)
+
+    # 1. Convert escaped newlines
+    s = s.replace("\\r\\n", "\n").replace("\\r", "\n").replace("\\n", "\n")
+
+    # 2. Check if text is raw JSON and extract clean content
+    trimmed = s.strip()
+    if (trimmed.startswith("{") and trimmed.endswith("}")) or (trimmed.startswith("[") and trimmed.endswith("]")):
+        try:
+            parsed = json.loads(trimmed)
+            if isinstance(parsed, dict):
+                blocks = []
+                if "english" in parsed and isinstance(parsed["english"], list):
+                    for idx, sec in enumerate(parsed["english"], start=1):
+                        title = sec.get("title") or sec.get("heading") or f"Section {idx}"
+                        content = sec.get("content") or ""
+                        blocks.append(f"### {idx}. {title}\n\n{content}")
+                    s = "\n\n---\n\n".join(blocks)
+                elif "telugu" in parsed and isinstance(parsed["telugu"], list):
+                    for idx, sec in enumerate(parsed["telugu"], start=1):
+                        title = sec.get("title") or sec.get("heading") or f"విభాగం {idx}"
+                        content = sec.get("content") or ""
+                        blocks.append(f"### {idx}. {title}\n\n{content}")
+                    s = "\n\n---\n\n".join(blocks)
+                elif "content" in parsed:
+                    s = str(parsed["content"])
+                elif "answer" in parsed:
+                    s = str(parsed["answer"])
+        except Exception:
+            pass
+
+    # 3. Sanitize HTML tags while preserving line breaks
+    s = re.sub(r"<br\s*/?>", "\n\n", s, flags=re.IGNORECASE)
+    s = re.sub(r"<li[^>]*>(.*?)</li>", r"\n• \1\n", s, flags=re.DOTALL | re.IGNORECASE)
+    s = re.sub(r"</?(?:ul|ol|div|span|p|section|article)[^>]*>", "\n", s, flags=re.IGNORECASE)
+    s = re.sub(r"<a\s+[^>]*href=['\"]([^'\"]+)['\"][^>]*>(.*?)</a>", r"[\2](\1)", s, flags=re.DOTALL | re.IGNORECASE)
+    s = re.sub(r"<[^>]+>", "", s)
+
+    # 4. Split inline bullets that were joined on a single line:
+    # e.g., "• Keep sheep clean. • Give clean water. • Monitor temperature."
+    s = re.sub(r"(\S)\s*[•●*]\s+", r"\1\n\n• ", s)
+    s = re.sub(r"^[•●*]\s+", r"• ", s, flags=re.MULTILINE)
+
+    # 5. Split inline numbered points that were joined into one paragraph:
+    # e.g., "1. Keep the sheep clean and dry. 2. Provide clean water. 3. Monitor symptoms."
+    s = re.sub(r"([.!?:\'\"\u0C00-\u0C7F])\s+(\d+|[\u0C66-\u0C6F]+)[\.\)]\s+", r"\1\n\n\2. ", s)
+    s = re.sub(r"([^#\s])\s+(\d+|[\u0C66-\u0C6F]+)[\.\)]\s+([A-Z\u0C00-\u0C7F*])", r"\1\n\n\2. \3", s)
+
+    # 6. Ensure headings have blank lines before and after them
+    s = re.sub(r"(?<!\n)\n(#{1,4}\s+)", r"\n\n\1", s)
+    s = re.sub(r"(#{1,4}\s+[^\n]+)\n(?!\n)", r"\1\n\n", s)
+
+    # 7. Ensure horizontal rules have clean blank lines
+    s = re.sub(r"(?<!\n)\n(---+)\n", r"\n\n\1\n\n", s)
+
+    # 8. Process line by line to guarantee blank line between numbered points and bullets
+    lines = [line.strip() for line in s.splitlines()]
+    processed_lines = []
+
+    for i, line in enumerate(lines):
+        if not line:
+            if processed_lines and processed_lines[-1] != "":
+                processed_lines.append("")
+            continue
+
+        is_heading = bool(re.match(r"^#{1,4}\s+", line))
+        is_hr = line == "---"
+        is_bullet = bool(re.match(r"^[•●*]\s+", line))
+        is_numbered = bool(re.match(r"^(\d+|[\u0C66-\u0C6F]+)[\.\)]\s+", line))
+
+        # Check if we should insert a blank line before this item
+        if processed_lines and processed_lines[-1] != "":
+            prev_line = processed_lines[-1]
+            prev_is_heading = bool(re.match(r"^#{1,4}\s+", prev_line))
+            prev_is_bullet = bool(re.match(r"^[•●*]\s+", prev_line))
+            prev_is_numbered = bool(re.match(r"^(\d+|[\u0C66-\u0C6F]+)[\.\)]\s+", prev_line))
+
+            if is_heading or is_hr or prev_is_heading or (prev_line == "---") or is_numbered or is_bullet:
+                processed_lines.append("")
+
+        processed_lines.append(line)
+
+    result = "\n".join(processed_lines)
+    result = re.sub(r"\n{3,}", "\n\n", result)
+    return result.strip()
 
 def format_retrieved_sources_markdown(documents: List[Document], language: str = "English + తెలుగు") -> str:
 

@@ -19,7 +19,8 @@ from .response_formatter import (
     format_retrieved_sources_html,
     format_retrieved_sources_markdown,
     sanitize_sources_to_markdown,
-    render_chat_message_html
+    render_chat_message_html,
+    format_point_by_point_markdown
 )
 from .ingest import run_ingestion
 
@@ -43,5 +44,6 @@ __all__ = [
     "format_retrieved_sources_markdown",
     "sanitize_sources_to_markdown",
     "render_chat_message_html",
+    "format_point_by_point_markdown",
     "run_ingestion"
 ]
